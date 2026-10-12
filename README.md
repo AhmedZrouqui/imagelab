@@ -1,46 +1,76 @@
 # ImageLab
 
-ImageLab is a free, privacy-first image compressor for JPG, PNG, and WebP files. Every image is decoded and encoded in the browser. There is no backend, account, database, upload service, or required API key.
+ImageLab is a fast, privacy-first image compressor for JPEG, PNG, and WebP files. Compression happens entirely in your browser: images are never uploaded, no account is required, and there is no backend to maintain.
 
-## Local development
+## Features
 
-Requirements: a current Node.js LTS release and npm.
+- Compress one image or a batch of up to 40 files
+- Use balanced automatic compression or set a maximum output size
+- Keep the original format or convert to JPEG, PNG, or WebP
+- Preview results and download files individually or as a ZIP
+- Preserve transparent pixels when using PNG or WebP
+- Process files locally with a two-job concurrency limit
+- Use dedicated, indexable pages for common 20–500 KB targets
+
+Target sizes are maximums, not exact-size guarantees. Very small targets may require substantial resizing, and lossless PNG files may not reach them. See [known limitations](docs/limitations.md) for details.
+
+## Getting started
+
+You need a current Node.js LTS release and npm.
 
 ```bash
 npm install
-copy .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Set `NEXT_PUBLIC_SITE_URL` to the stable public URL when checking production metadata.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Quality commands
+No environment variables are required for local development. For deployed metadata, copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SITE_URL` to the public production URL.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local development server |
+| `npm run build` | Create a production build |
+| `npm start` | Serve the production build |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Check TypeScript without emitting files |
+| `npm run test:run` | Run the Vitest unit suite once |
+| `npm run test:e2e` | Run Playwright browser tests |
+| `npm run verify` | Run lint, type-checking, unit tests, and a production build |
+
+Install Playwright's Chromium browser once before running end-to-end tests:
 
 ```bash
-npm run lint
-npm run typecheck
-npm run test:run
-npm run test:e2e
-npm run build
+npx playwright install chromium
 ```
 
-`npm run verify` runs linting, TypeScript, unit tests, and the production build. Install Playwright's Chromium browser once with `npx playwright install chromium` before the end-to-end suite.
+## How it works
 
-## Architecture
+The Next.js App Router provides the public pages and metadata. The compression workspace keeps original `File` objects in memory, so navigating inside the app preserves a session while refreshing clears it.
 
-Static App Router pages provide public content and metadata. Client components own the file picker and compression workspace. Original `File` objects remain in an in-memory external store, so route navigation works without persistence and a refresh intentionally clears the session.
+Compression is isolated from React. Browser Canvas APIs perform the encoding, a bounded search adjusts quality and dimensions for target-size jobs, and JSZip packages completed batch results locally. Image data is not stored in cookies, local storage, or a database.
 
-The compression engine is separate from React. Automatic mode uses a conservative native re-encode. Target mode uses bounded quality samples and progressive dimension reduction, preserves aspect ratio, and accepts only blobs below the selected maximum. Browser Canvas codecs do the actual work. A two-job scheduler limits batch concurrency, and JSZip assembles completed results locally.
+## Project limits
 
-## Deploy to Vercel
+| Limit | Value |
+| --- | ---: |
+| Files per batch | 40 |
+| Maximum file size | 30 MB |
+| Maximum batch size | 250 MB |
+| Maximum image dimensions | 40 megapixels |
+| Concurrent compression jobs | 2 |
 
-1. Import this repository into Vercel.
-2. Keep the default Next.js build command (`npm run build`).
-3. Add `NEXT_PUBLIC_SITE_URL` with the stable assigned `https://…vercel.app` domain.
-4. Deploy again after the domain is assigned so canonical URLs, the sitemap, and robots metadata use the stable host.
+Supported inputs are JPEG, PNG, and WebP. HEIC, AVIF input, animated images, and metadata preservation are not currently supported.
 
-No paid infrastructure or secrets are required. Do not set `NEXT_PUBLIC_SITE_URL` to a preview deployment URL.
+## Deployment
 
-## Privacy and browser support
+The project can be deployed as a standard Next.js application. On Vercel:
 
-Image bytes are not sent over the network or placed in web storage. Object URLs are released when items are removed, replaced, or reset. The app targets current evergreen browsers with Canvas, `createImageBitmap`, Blob, and download support. See [known limitations](docs/limitations.md).
+1. Import the repository.
+2. Keep the default `npm run build` command.
+3. Set `NEXT_PUBLIC_SITE_URL` to the stable production domain.
+4. Redeploy so canonical URLs, `robots.txt`, and the sitemap use that domain.
+
+No API keys, database, or paid infrastructure are required.
