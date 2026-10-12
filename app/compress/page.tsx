@@ -1,0 +1,1 @@
+import{SiteHeader}from"@/components/site-header";import{CompressorWorkspace}from"@/components/compressor/workspace";export default function CompressPage(){return <><SiteHeader/><CompressorWorkspace/></>}
